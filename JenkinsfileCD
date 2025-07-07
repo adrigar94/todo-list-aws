@@ -1,9 +1,5 @@
 pipeline {
     agent any
-    
-    environment {
-        GITTOKEN = credentials('gittoken')
-    }
 
     stages {
         stage('Get Code') {
