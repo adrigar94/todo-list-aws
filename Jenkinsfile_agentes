@@ -1,12 +1,14 @@
 pipeline {
     agent any
 
+
     stages {
         stage('Get Code') {
             steps {
                 echo 'Downloading code'
                 git branch: 'develop', url: 'https://github.com/adrigar94/todo-list-aws.git'
                 sh 'ls -la'
+
                 stash name: 'code', includes: '**/*,.*', useDefaultExcludes: false
                 echo WORKSPACE
                 sh 'whoami'
@@ -19,6 +21,7 @@ pipeline {
             }
         }
         
+
         stage('Deploy') {
             steps {
                 echo WORKSPACE
@@ -100,6 +103,7 @@ pipeline {
                 }
             }
         }
+
 
     }
 }
