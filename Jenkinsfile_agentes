@@ -8,7 +8,7 @@ pipeline {
                 echo 'Downloading code'
                 git branch: 'develop', url: 'https://github.com/adrigar94/todo-list-aws.git'
                 sh 'ls -la'
-
+                sh 'curl -O https://raw.githubusercontent.com/adrigar94/todo-list-aws-config/refs/heads/production/samconfig.toml'
                 stash name: 'code', includes: '**/*,.*', useDefaultExcludes: false
                 echo WORKSPACE
                 sh 'whoami'
