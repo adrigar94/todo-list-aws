@@ -1,9 +1,5 @@
 pipeline {
     agent any
-    
-    environment {
-        GITTOKEN = credentials('gittoken')
-    }
 
     stages {
         stage('Get Code') {
@@ -23,37 +19,6 @@ pipeline {
             }
         }
         
-        stage('Static Test') {
-            steps {
-                echo WORKSPACE
-                sh 'whoami'
-                sh 'hostname'
-                unstash 'code'
-                sh '''
-                    export PYTHONPATH=$WORKSPACE
-                    flake8 --exit-zero --format=pylint src > static.out
-                '''
-                recordIssues tools: [flake8(pattern: 'static.out')],
-                    qualityGates: [
-                        [threshold: 8, type: 'TOTAL', unstable: true],
-                        [threshold: 10, type: 'TOTAL', criticality: 'ERROR'],
-                    ]
-                sh '''
-                    bandit -r . -f custom -o security.out --msg-template "{abspath}:{line}: [{test_id}] {msg}" || true
-                '''
-                recordIssues tools: [pyLint(pattern: 'security.out')],
-                    qualityGates: [
-                        [threshold: 2, type: 'TOTAL', unstable: true],
-                        [threshold: 4, type: 'TOTAL', criticality: 'ERROR'],
-                    ]
-            }
-            post {
-                always {
-                    deleteDir()
-                }
-            }
-        }
-        
         stage('Deploy') {
             steps {
                 echo WORKSPACE
@@ -65,7 +30,7 @@ pipeline {
                     sam build
                       
                     sam deploy \
-                      --config-env staging \
+                      --config-env production \
                       --config-file samconfig.toml \
                       --no-confirm-changeset \
                       --s3-bucket "" \
@@ -74,7 +39,7 @@ pipeline {
                       
                     echo "Obteniendo BaseUrlApi desde CloudFormation..."
                     aws cloudformation describe-stacks \
-                        --stack-name todo-list-aws-staging \
+                        --stack-name todo-list-aws-production \
                         --region us-east-1 \
                         --query "Stacks[0].Outputs[?OutputKey=='BaseUrlApi'].OutputValue" \
                         --output text > baseurl.txt
@@ -120,34 +85,13 @@ pipeline {
                             fi
                         done
                 
-                        pytest --junitxml=result-rest.xml test/integration/todoApiTest.py::TestApi
+                        pytest --junitxml=result-rest.xml  \
+                            test/integration/todoApiTest.py::TestApi::test_api_listtodos \
+                            test/integration/todoApiTest.py::TestApi::test_api_gettodo
                     """
                 }
                 }
                 junit 'result-rest.xml'
-            }
-            post {
-                always {
-                    deleteDir()
-                }
-            }
-        }
-        
-        
-
-        stage('Promote') {
-            steps {
-                echo WORKSPACE
-                sh 'whoami'
-                sh 'hostname'
-                unstash 'code'
-                sh '''
-                    git checkout master
-                    git pull origin master
-                    git merge origin/develop
-                    git push https://$GITTOKEN@github.com/adrigar94/todo-list-aws master
-                '''
-                
             }
             post {
                 always {
